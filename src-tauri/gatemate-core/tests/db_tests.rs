@@ -3,8 +3,7 @@ use gatemate_core::db;
 
 fn create_test_connection() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
-    conn.execute("PRAGMA journal_mode=WAL;", []).unwrap();
-    conn.execute("PRAGMA synchronous=NORMAL;", []).unwrap();
+    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;").unwrap();
     
     conn.execute(
         "CREATE TABLE IF NOT EXISTS projects (
@@ -66,6 +65,49 @@ fn create_test_connection() -> Connection {
             priority INTEGER DEFAULT 0,
             is_enabled INTEGER DEFAULT 1,
             FOREIGN KEY (project_id) REFERENCES projects(id)
+        )",
+        [],
+    ).unwrap();
+    
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS usage_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key_id INTEGER NOT NULL,
+            project_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            cost REAL DEFAULT 0.0,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    ).unwrap();
+    
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS call_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            key_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            remark TEXT DEFAULT '',
+            model TEXT DEFAULT '',
+            prompt_tokens INTEGER DEFAULT 0,
+            completion_tokens INTEGER DEFAULT 0,
+            cost REAL DEFAULT 0.0,
+            status TEXT DEFAULT 'success',
+            error_message TEXT,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    ).unwrap();
+    
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
         )",
         [],
     ).unwrap();
@@ -204,7 +246,16 @@ fn test_update_routing_rule() {
     let project_id = db::create_project(&conn, "Test Project", "").unwrap();
     let id = db::insert_routing_rule(&conn, project_id, "Test Rule", "keyword", "test", "openai", "gpt-4").unwrap();
     
-    db::update_routing_rule(&conn, id, "Updated Rule", "regex", "new-pattern", "deepseek", "deepseek-chat", 1, 0).unwrap();
+    let update = db::RoutingRuleUpdate {
+        rule_name: "Updated Rule".to_string(),
+        match_type: "regex".to_string(),
+        match_content: "new-pattern".to_string(),
+        target_provider: "deepseek".to_string(),
+        target_model: "deepseek-chat".to_string(),
+        priority: 1,
+        is_enabled: 0,
+    };
+    db::update_routing_rule(&conn, id, &update).unwrap();
     
     let rules = db::get_routing_rules(&conn, project_id).unwrap();
     assert_eq!(rules[0].rule_name, "Updated Rule");

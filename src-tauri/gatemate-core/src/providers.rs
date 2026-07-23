@@ -10,7 +10,7 @@ pub struct ProviderConfig {
     pub completion_price: f64,
 }
 
-pub static PROVIDERS: [(&'static str, ProviderConfig); 13] = [
+pub static PROVIDERS: [(&str, ProviderConfig); 13] = [
     ("openai", ProviderConfig {
         name: "OpenAI",
         url: "https://api.openai.com/v1/chat/completions",

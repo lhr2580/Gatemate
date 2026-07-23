@@ -93,6 +93,17 @@ pub struct RoutingRule {
     pub is_enabled: i32,
 }
 
+#[derive(Debug, Clone)]
+pub struct RoutingRuleUpdate {
+    pub rule_name: String,
+    pub match_type: String,
+    pub match_content: String,
+    pub target_provider: String,
+    pub target_model: String,
+    pub priority: i32,
+    pub is_enabled: i32,
+}
+
 pub fn init_db(db_path: &str) -> Result<Connection> {
     let conn = Connection::open(db_path)?;
     
@@ -819,10 +830,10 @@ pub fn insert_routing_rule(conn: &Connection, project_id: i64, rule_name: &str, 
     Ok(conn.last_insert_rowid())
 }
 
-pub fn update_routing_rule(conn: &Connection, id: i64, rule_name: &str, match_type: &str, match_content: &str, target_provider: &str, target_model: &str, priority: i32, is_enabled: i32) -> Result<()> {
+pub fn update_routing_rule(conn: &Connection, id: i64, update: &RoutingRuleUpdate) -> Result<()> {
     conn.execute(
         "UPDATE routing_rules SET rule_name = ?, match_type = ?, match_content = ?, target_provider = ?, target_model = ?, priority = ?, is_enabled = ? WHERE id = ?",
-        params![rule_name, match_type, match_content, target_provider, target_model, priority, is_enabled, id],
+        params![update.rule_name, update.match_type, update.match_content, update.target_provider, update.target_model, update.priority, update.is_enabled, id],
     )?;
     Ok(())
 }

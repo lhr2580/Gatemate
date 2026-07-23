@@ -426,7 +426,7 @@ fn export_csv(project_id: i64, start_date: String, end_date: String, conn: State
     for log in logs {
         let error = log.error_message.clone().unwrap_or_default().replace(",", "");
         csv.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{:.4},{},{}\n",
             log.id,
             log.created_at,
             log.provider,
@@ -434,7 +434,7 @@ fn export_csv(project_id: i64, start_date: String, end_date: String, conn: State
             log.model,
             log.prompt_tokens,
             log.completion_tokens,
-            format!("{:.4}", log.cost),
+            log.cost,
             log.status,
             error
         ));
@@ -451,7 +451,7 @@ fn export_pdf(project_id: i64, start_date: String, end_date: String, conn: State
     let app_data_dir = get_app_data_dir();
     let pdf_path = app_data_dir.join("backups").join(format!("report_{}.pdf", chrono::Local::now().format("%Y%m%d_%H%M%S")));
     
-    if let Err(e) = std::fs::create_dir_all(&app_data_dir.join("backups")) {
+    if let Err(e) = std::fs::create_dir_all(app_data_dir.join("backups")) {
         return Err(format!("创建备份目录失败: {}", e));
     }
     
@@ -465,26 +465,26 @@ fn export_pdf(project_id: i64, start_date: String, end_date: String, conn: State
     let mut y_pos = Mm(270.0);
     
     current_layer.use_text("GateMate Report", 24.0, Mm(10.0), y_pos, &font);
-    y_pos = y_pos - Mm(30.0);
+    y_pos -= Mm(30.0);
     
-    current_layer.use_text(&format!("Project ID: {}", project_id), 12.0, Mm(10.0), y_pos, &font);
-    y_pos = y_pos - Mm(15.0);
+    current_layer.use_text(format!("Project ID: {}", project_id), 12.0, Mm(10.0), y_pos, &font);
+    y_pos -= Mm(15.0);
     
-    current_layer.use_text(&format!("Date Range: {} ~ {}", start_date, end_date), 12.0, Mm(10.0), y_pos, &font);
-    y_pos = y_pos - Mm(15.0);
+    current_layer.use_text(format!("Date Range: {} ~ {}", start_date, end_date), 12.0, Mm(10.0), y_pos, &font);
+    y_pos -= Mm(15.0);
     
-    current_layer.use_text(&format!("Generated: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")), 12.0, Mm(10.0), y_pos, &font);
-    y_pos = y_pos - Mm(30.0);
+    current_layer.use_text(format!("Generated: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")), 12.0, Mm(10.0), y_pos, &font);
+    y_pos -= Mm(30.0);
     
-    let headers = vec!["Time", "Provider", "Model", "Prompt", "Completion", "Cost"];
-    let col_widths = vec![Mm(40.0), Mm(50.0), Mm(50.0), Mm(30.0), Mm(30.0), Mm(30.0)];
+    let headers = ["Time", "Provider", "Model", "Prompt", "Completion", "Cost"];
+    let col_widths = [Mm(40.0), Mm(50.0), Mm(50.0), Mm(30.0), Mm(30.0), Mm(30.0)];
     
     let mut x_pos = Mm(10.0);
     for (header, width) in headers.iter().zip(col_widths.iter()) {
         current_layer.use_text(*header, 10.0, x_pos, y_pos, &font);
-        x_pos = x_pos + *width;
+        x_pos += *width;
     }
-    y_pos = y_pos - Mm(15.0);
+    y_pos -= Mm(15.0);
     
     let mut total_cost = 0.0;
     
@@ -497,37 +497,37 @@ fn export_pdf(project_id: i64, start_date: String, end_date: String, conn: State
             x_pos = Mm(10.0);
             for (header, width) in headers.iter().zip(col_widths.iter()) {
                 current_layer.use_text(*header, 10.0, x_pos, y_pos, &font);
-                x_pos = x_pos + *width;
+                x_pos += *width;
             }
-            y_pos = y_pos - Mm(15.0);
+            y_pos -= Mm(15.0);
         }
         
         total_cost += log.cost;
         x_pos = Mm(10.0);
         
-        let time_str = log.created_at.split(' ').last().unwrap_or(&log.created_at);
+        let time_str = log.created_at.split(' ').next_back().unwrap_or(&log.created_at);
         current_layer.use_text(time_str, 8.0, x_pos, y_pos, &font);
-        x_pos = x_pos + col_widths[0];
+        x_pos += col_widths[0];
         
         current_layer.use_text(&log.provider, 8.0, x_pos, y_pos, &font);
-        x_pos = x_pos + col_widths[1];
+        x_pos += col_widths[1];
         
         let model_display = if log.model.len() > 15 { &log.model[..15] } else { &log.model };
         current_layer.use_text(model_display, 8.0, x_pos, y_pos, &font);
-        x_pos = x_pos + col_widths[2];
+        x_pos += col_widths[2];
         
-        current_layer.use_text(&log.prompt_tokens.to_string(), 8.0, x_pos, y_pos, &font);
-        x_pos = x_pos + col_widths[3];
+        current_layer.use_text(log.prompt_tokens.to_string(), 8.0, x_pos, y_pos, &font);
+        x_pos += col_widths[3];
         
-        current_layer.use_text(&log.completion_tokens.to_string(), 8.0, x_pos, y_pos, &font);
-        x_pos = x_pos + col_widths[4];
+        current_layer.use_text(log.completion_tokens.to_string(), 8.0, x_pos, y_pos, &font);
+        x_pos += col_widths[4];
         
-        current_layer.use_text(&format!("${:.4}", log.cost), 8.0, x_pos, y_pos, &font);
-        y_pos = y_pos - Mm(12.0);
+        current_layer.use_text(format!("${:.4}", log.cost), 8.0, x_pos, y_pos, &font);
+        y_pos -= Mm(12.0);
     }
     
-    y_pos = y_pos - Mm(20.0);
-    current_layer.use_text(&format!("Total: {} calls, Cost ${:.4}", logs.len(), total_cost), 14.0, Mm(10.0), y_pos, &font);
+    y_pos -= Mm(20.0);
+    current_layer.use_text(format!("Total: {} calls, Cost ${:.4}", logs.len(), total_cost), 14.0, Mm(10.0), y_pos, &font);
     
     let file = std::fs::File::create(&pdf_path).map_err(|e| format!("创建文件失败: {}", e))?;
     let mut writer = BufWriter::new(file);
@@ -664,9 +664,19 @@ fn insert_routing_rule(project_id: i64, rule_name: String, match_type: String, m
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn update_routing_rule(id: i64, rule_name: String, match_type: String, match_content: String, target_provider: String, target_model: String, priority: i32, is_enabled: i32, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
     let conn = conn.lock().unwrap();
-    match db::update_routing_rule(&conn, id, &rule_name, &match_type, &match_content, &target_provider, &target_model, priority, is_enabled) {
+    let update = db::RoutingRuleUpdate {
+        rule_name,
+        match_type,
+        match_content,
+        target_provider,
+        target_model,
+        priority,
+        is_enabled,
+    };
+    match db::update_routing_rule(&conn, id, &update) {
         Ok(_) => "success".to_string(),
         Err(e) => format!("失败: {}", e),
     }
@@ -710,13 +720,13 @@ fn get_app_data_dir() -> PathBuf {
 
 pub fn run() {
     let app_data_dir = get_app_data_dir();
-    if let Err(e) = std::fs::create_dir_all(&app_data_dir.join("data")) {
+    if let Err(e) = std::fs::create_dir_all(app_data_dir.join("data")) {
         eprintln!("⚠️ 创建数据目录失败: {}", e);
     }
-    if let Err(e) = std::fs::create_dir_all(&app_data_dir.join("backups")) {
+    if let Err(e) = std::fs::create_dir_all(app_data_dir.join("backups")) {
         eprintln!("⚠️ 创建备份目录失败: {}", e);
     }
-    if let Err(e) = std::fs::create_dir_all(&app_data_dir.join("logs")) {
+    if let Err(e) = std::fs::create_dir_all(app_data_dir.join("logs")) {
         eprintln!("⚠️ 创建日志目录失败: {}", e);
     }
     
@@ -768,11 +778,10 @@ pub fn run() {
             is_pro_user, reload_plugins, verify_license
         ])
         .manage(Arc::new(Mutex::new(db_conn)))
-        .on_window_event(|window, event| match event {
-            tauri::WindowEvent::CloseRequested { api: _, .. } => {
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
                 let _ = window.close();
             }
-            _ => {}
         })
         .setup(|app| {
             #[cfg(debug_assertions)]

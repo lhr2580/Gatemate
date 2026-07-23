@@ -17,15 +17,12 @@ pub fn generate_random_key() -> Vec<u8> {
 
 pub fn get_master_key() -> Vec<u8> {
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USERNAME) {
-        match entry.get_password() {
-            Ok(key_b64) => {
-                if let Ok(key) = general_purpose::STANDARD.decode(&key_b64) {
-                    if key.len() == 32 {
-                        return key;
-                    }
+        if let Ok(key_b64) = entry.get_password() {
+            if let Ok(key) = general_purpose::STANDARD.decode(&key_b64) {
+                if key.len() == 32 {
+                    return key;
                 }
             }
-            Err(_) => {}
         }
     }
     

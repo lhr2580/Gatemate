@@ -157,7 +157,7 @@ async fn handle_connection(
                 "stream": stream_mode
             });
             
-            let call_log_id = insert_call_log(&db_arc, project_id, selected_key.id, provider, &remark, model);
+            let call_log_id = insert_call_log(&db_arc, project_id, selected_key.id, provider, remark, model);
             
             if stream_mode {
                 let response = client.post(&url)
@@ -177,8 +177,7 @@ async fn handle_connection(
                             buffer.push_str(&chunk_str);
                             
                             for line in chunk_str.lines() {
-                                if line.starts_with("data: ") {
-                                    let data = &line[6..];
+                                if let Some(data) = line.strip_prefix("data: ") {
                                     if data == "[DONE]" {
                                         break;
                                     }
