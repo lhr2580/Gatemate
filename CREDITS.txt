@@ -1,0 +1,43 @@
+GateMate - Copyright (c) 2026
+
+=== Font Licenses ===
+
+Note: The following fonts are referenced only in CSS font-family fallback stacks. 
+No font files are included in this project repository. Users' systems must have 
+these fonts installed or the browser will use system fallback fonts.
+
+1. Source Han Sans SC (思源黑体)
+   - License: SIL Open Font License 1.1 (OFL)
+   - Copyright: Copyright 2014-2024 Adobe (http://www.adobe.com/), with Reserved Font Name "Source".
+   - Website: https://github.com/adobe-fonts/source-han-sans
+   - License Text:
+     This Font Software is licensed under the SIL Open Font License, Version 1.1.
+     This license is available with a FAQ at: http://scripts.sil.org/OFL
+
+2. Noto Sans SC (Noto 简体中文)
+   - License: SIL Open Font License 1.1 (OFL)
+   - Copyright: Copyright 2014-2024 Google Inc.
+   - Website: https://github.com/googlefonts/noto-cjk
+   - License Text:
+     This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+3. 阿里巴巴普惠体 (Alibaba PuHuiTi)
+   - License: Alibaba PuHuiTi Font License
+   - Copyright: Copyright 2020-2024 Alibaba Group Holding Limited
+   - Website: https://www.iconfont.cn/fonts/detail?cnid=146271
+   - Usage: Free for personal and commercial use
+
+=== Third-party Libraries ===
+
+This project uses the following open-source libraries:
+- Vue 3 (MIT License)
+- Tauri (Apache 2.0 License)
+- Rust (MIT/Apache 2.0 Dual License)
+- SQLite (Public Domain)
+- ed25519-dalek (BSD-3-Clause)
+- serde (MIT/Apache 2.0 Dual License)
+
+=== License ===
+
+GateMate Core (Open Source Edition) is released under the MIT License.
+See LICENSE file for details.

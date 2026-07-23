@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:38080; font-src 'self'" />
+    <title>GateMate - AI 调度中心</title>
+    <link rel="stylesheet" href="/src/global.css" />
+  </head>
+
+  <body>
+    <div id="splashscreen">
+      <div class="splash-logo-container">
+        <span class="splash-icon">⚡</span>
+        <span class="splash-text">GateMate</span>
+        <span class="splash-slogan">您的 AI 基础设施</span>
+        <div class="splash-progress-container">
+          <div class="splash-progress-bar"></div>
+        </div>
+      </div>
+    </div>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

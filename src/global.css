@@ -1,0 +1,152 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  color: #e6edf3;
+  transition: all 0.3s ease;
+}
+
+#splashscreen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0a0e17 0%, #0f1624 50%, #1a1f3a 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeOut 0.5s ease 2s forwards;
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; pointer-events: none; }
+}
+
+.splash-logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: logoScale 1s ease;
+}
+
+@keyframes logoScale {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.splash-icon { font-size: 3rem; margin-bottom: 16px; }
+.splash-text { font-size: 2rem; font-weight: 700; color: #58a6ff; }
+.splash-slogan { font-size: 0.95rem; color: #8b949e; margin-top: 8px; }
+
+.splash-progress-container {
+  width: 200px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 32px;
+  overflow: hidden;
+}
+
+.splash-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #58a6ff, #79c0ff);
+  border-radius: 2px;
+  width: 0%;
+  animation: progressFill 2s ease forwards;
+}
+
+@keyframes progressFill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+body.theme-deep-space {
+  --bg-primary: linear-gradient(135deg, #0a0e17 0%, #0f1624 50%, #1a1f3a 100%);
+  --bg-card: rgba(13, 17, 23, 0.85);
+  --bg-sidebar: rgba(13, 17, 23, 0.95);
+  --bg-input: rgba(0, 0, 0, 0.4);
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
+  --accent-color: #58a6ff;
+  --accent-bg: rgba(88, 166, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.05);
+  --success-color: #2ea043;
+  --warning-color: #faa31a;
+  --danger-color: #f85149;
+  color-scheme: dark;
+}
+
+body.theme-bright-moon {
+  --bg-primary: linear-gradient(135deg, #f6f8fa 0%, #eef2f5 50%, #dde1e6 100%);
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-sidebar: rgba(255, 255, 255, 0.95);
+  --bg-input: rgba(0, 0, 0, 0.05);
+  --text-primary: #21262d;
+  --text-secondary: #6e7681;
+  --text-muted: #8b949e;
+  --accent-color: #0969da;
+  --accent-bg: rgba(9, 105, 218, 0.08);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --success-color: #238636;
+  --warning-color: #9e6a03;
+  --danger-color: #da3633;
+  color-scheme: light;
+}
+
+body.theme-aurora {
+  --bg-primary: linear-gradient(135deg, #0a1628 0%, #0d1b2a 25%, #1b263b 50%, #0d1b2a 75%, #0a1628 100%);
+  --bg-card: rgba(13, 23, 42, 0.85);
+  --bg-sidebar: rgba(13, 23, 42, 0.95);
+  --bg-input: rgba(0, 0, 0, 0.4);
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
+  --accent-color: #58a6ff;
+  --accent-bg: rgba(88, 166, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.05);
+  --success-color: #2ea043;
+  --warning-color: #faa31a;
+  --danger-color: #f85149;
+  color-scheme: dark;
+  background-size: 400% 400%;
+  animation: auroraFlow 15s ease infinite;
+}
+
+@keyframes auroraFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 8px 12px;
+}
+
+select option:disabled {
+  color: var(--text-muted);
+}
+
+input[type="date"] {
+  color-scheme: var(--color-scheme, dark);
+}

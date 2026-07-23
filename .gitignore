@@ -1,0 +1,61 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node.js
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build artifacts
+src-tauri/target/
+src-tauri/gatemate-core/target/
+
+# Runtime database files (generated at runtime)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+**/backups/*.db
+
+# Tauri - exclude target but keep schemas
+src-tauri/gatemate-core/gen/target/
+!src-tauri/gatemate-core/gen/schemas/
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.tmp
+
+# Sensitive files
+master_key.bin
+*.key
+*.pem
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Closed source plugin
+src-tauri/gatemate-pro-plugin/

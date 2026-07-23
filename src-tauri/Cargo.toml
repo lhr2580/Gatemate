@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "gatemate-core",
+    "gatemate-plugin-api",
+]
+default-members = ["gatemate-core"]
+resolver = "2"
+
+[profile.release]
+lto = "thin"
+opt-level = "s"
