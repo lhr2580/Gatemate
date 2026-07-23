@@ -42,16 +42,30 @@ GateMate 是一个开源的 API 密钥管理和负载均衡工具，帮助开发
 - Node.js 18+
 - pnpm
 
-## 🚀 构建步骤
+## 🚀 安装步骤
+
+### 1. 克隆仓库
 
 ```bash
-# 1. 安装前端依赖
+git clone https://github.com/lhr2580/Gatemate.git
+cd Gatemate
+```
+
+### 2. 安装前端依赖
+
+```bash
 pnpm install
+```
 
-# 2. 构建前端
+### 3. 构建前端
+
+```bash
 pnpm build
+```
 
-# 3. 构建 Tauri 应用
+### 4. 构建 Tauri 应用
+
+```bash
 pnpm tauri build
 ```
 
@@ -64,6 +78,39 @@ pnpm dev
 # 启动 Tauri 开发模式
 pnpm tauri dev
 ```
+
+## 🐛 常见问题
+
+### Rust 安装
+如果没有安装 Rust，可以通过 [rustup](https://rustup.rs/) 安装：
+
+```bash
+# Windows (PowerShell)
+Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe; .\rustup-init.exe -y
+
+# macOS/Linux
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### pnpm 安装
+如果没有安装 pnpm，可以通过 npm 安装：
+
+```bash
+npm install -g pnpm
+```
+
+### 构建失败
+- 确保安装了 Visual Studio Build Tools（Windows）或 Xcode（macOS）
+- 确保 Rust 版本 >= 1.70
+- 确保 Node.js 版本 >= 18
+
+### 数据目录权限
+应用会在以下目录创建数据文件：
+- Windows: `%LOCALAPPDATA%\gatemate\`
+- macOS: `~/Library/Application Support/gatemate/`
+- Linux: `~/.config/gatemate/`
+
+确保用户对上述目录有读写权限。
 
 ## 💾 数据存储
 
