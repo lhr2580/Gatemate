@@ -63,7 +63,7 @@ async fn handle_connection(
     route_strategy: Arc<Mutex<RouteStrategy>>,
     _db_path: String,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut buf = [0; 1024];
+    let mut buf = [0; 8192];
     let n = stream.peek(&mut buf).await?;
     
     let request_str = String::from_utf8_lossy(&buf[..n]);
@@ -133,7 +133,7 @@ async fn handle_connection(
             }
             
             let client = Client::new();
-            let url = get_provider_url(provider);
+            let url = get_provider_url(provider, model);
             
             let mut headers = reqwest::header::HeaderMap::new();
             headers.insert("Content-Type", "application/json".parse().unwrap());
@@ -201,7 +201,7 @@ async fn handle_connection(
                             }
                         }
                         
-                        let total_cost = calculate_cost(provider, model, prompt_tokens, completion_tokens);
+                        let total_cost = providers::calculate_cost(provider, model, prompt_tokens, completion_tokens);
                         update_call_log(&db_arc, call_log_id, prompt_tokens, completion_tokens, total_cost, "success", None);
                         update_key_usage(&db_arc, selected_key.id, total_cost);
                         
@@ -245,7 +245,7 @@ async fn handle_connection(
                         let usage = response_json["usage"].as_object().unwrap_or(&empty_map);
                         let prompt_tokens = usage["prompt_tokens"].as_i64().unwrap_or(0);
                         let completion_tokens = usage["completion_tokens"].as_i64().unwrap_or(0);
-                        let total_cost = calculate_cost(provider, model, prompt_tokens, completion_tokens);
+                        let total_cost = providers::calculate_cost(provider, model, prompt_tokens, completion_tokens);
                         
                         update_call_log(&db_arc, call_log_id, prompt_tokens, completion_tokens, total_cost, "success", None);
                         update_key_usage(&db_arc, selected_key.id, total_cost);
@@ -388,13 +388,11 @@ fn check_budget(db_arc: &Arc<Mutex<Connection>>, project_id: i64) -> String {
     }
 }
 
-fn get_provider_url(provider: &str) -> String {
-    providers::get_provider_url(provider)
+fn get_provider_url(provider: &str, model: &str) -> String {
+    providers::get_provider_url_with_model(provider, model)
 }
 
-fn calculate_cost(provider: &str, model: &str, prompt_tokens: i64, completion_tokens: i64) -> f64 {
-    providers::calculate_cost(provider, model, prompt_tokens, completion_tokens)
-}
+
 
 fn insert_call_log(db_arc: &Arc<Mutex<Connection>>, project_id: i64, key_id: i64, provider: &str, remark: &str, model: &str) -> i64 {
     let conn = db_arc.lock().unwrap();

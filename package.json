@@ -2,12 +2,33 @@
   "name": "gatemate",
   "private": true,
   "version": "2.0.0",
+  "description": "GateMate - Open Source API Key Management and AI Gateway",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lhr2580/Gatemate.git"
+  },
+  "author": "刘浩然 <lhr2580@github.com>",
+  "license": "MIT",
+  "keywords": [
+    "api-key",
+    "gateway",
+    "ai",
+    "router",
+    "proxy"
+  ],
+  "bugs": {
+    "url": "https://github.com/lhr2580/Gatemate/issues"
+  },
+  "homepage": "https://github.com/lhr2580/Gatemate",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -18,8 +39,11 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vitest/ui": "^4.1.10",
+    "@vue/test-utils": "^2.4.11",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
+    "vitest": "^4.1.10",
     "vue-tsc": "^2.1.10"
   }
 }

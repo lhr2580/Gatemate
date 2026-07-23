@@ -32,6 +32,22 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
+### 测试
+
+```bash
+# 前端测试
+pnpm test
+
+# 前端测试 UI
+pnpm test:ui
+
+# 前端测试覆盖率
+pnpm test:coverage
+
+# Rust 测试
+cargo test --manifest-path src-tauri/gatemate-core/Cargo.toml
+```
+
 ## 🐛 报告问题
 
 请在 GitHub Issues 中报告问题。报告时请提供：
@@ -58,8 +74,8 @@ pnpm tauri build
 
 ### 代码规范
 
-- **Rust**: 遵循 Rust 官方代码规范，运行 `cargo fmt` 格式化代码
-- **TypeScript/Vue**: 遵循 ESLint 规则，运行 `pnpm lint` 检查
+- **Rust**: 遵循 Rust 官方代码规范，运行 `cargo fmt` 格式化代码，运行 `cargo clippy` 检查
+- **TypeScript/Vue**: 遵循 ESLint 规则，运行 `pnpm build` 检查
 - **提交信息**: 使用语义化提交信息
 
 ### Pull Request 要求
@@ -68,6 +84,7 @@ pnpm tauri build
 - 没有新的警告
 - 添加相关测试（如有）
 - 更新文档（如有）
+- 更新 CHANGELOG.md（如有）
 
 ## 🔌 插件开发
 
@@ -76,3 +93,8 @@ pnpm tauri build
 ## 📄 许可证
 
 贡献的代码将遵循 MIT License。
+
+## 🤝 联系方式
+
+- GitHub: [lhr2580/Gatemate](https://github.com/lhr2580/Gatemate)
+- 邮箱: contact@gatemate.dev

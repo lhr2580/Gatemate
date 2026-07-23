@@ -35,7 +35,10 @@ pub fn get_master_key() -> Vec<u8> {
     let key = if key_path.exists() {
         match fs::read(&key_path) {
             Ok(key) if key.len() == 32 => {
+                eprintln!("⚠️ 警告: 检测到旧版明文密钥文件，正在迁移到安全存储...");
                 let _ = fs::remove_file(&key_path);
+                let mut key_clone = key.clone();
+                key_clone.zeroize();
                 key
             }
             Ok(mut key) => {
@@ -48,9 +51,24 @@ pub fn get_master_key() -> Vec<u8> {
         generate_random_key()
     };
     
+    let mut key_for_storage = key.clone();
+    
+    let mut stored = false;
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USERNAME) {
         let key_b64 = general_purpose::STANDARD.encode(&key);
-        let _ = entry.set_password(&key_b64);
+        if let Err(e) = entry.set_password(&key_b64) {
+            eprintln!("⚠️ 警告: 无法将主密钥存储到系统密钥链: {} - 密钥将在重启后丢失", e);
+        } else {
+            stored = true;
+        }
+    } else {
+        eprintln!("⚠️ 警告: 系统密钥链不可用 - 密钥将在重启后丢失");
+    }
+    
+    key_for_storage.zeroize();
+    
+    if !stored {
+        eprintln!("⚠️ 警告: 主密钥仅存储在内存中，重启后将重新生成，所有加密数据将无法解密");
     }
     
     key
@@ -82,11 +100,7 @@ impl std::fmt::Display for CryptoError {
 impl std::error::Error for CryptoError {}
 
 pub fn encrypt(data: &str, key: &[u8]) -> Result<String, CryptoError> {
-    if key.len() != 32 {
-        return Err(CryptoError::InvalidKeyLength);
-    }
-    
-    let key_arr: [u8; 32] = key.try_into().unwrap();
+    let key_arr: [u8; 32] = key.try_into().map_err(|_| CryptoError::InvalidKeyLength)?;
     
     let cipher = Aes256Gcm::new(Key::<aes_gcm::Aes256Gcm>::from_slice(&key_arr));
     let nonce = Aes256Gcm::generate_nonce(&mut rand::thread_rng());
@@ -109,11 +123,7 @@ pub fn decrypt(encoded: &str, key: &[u8]) -> Result<String, CryptoError> {
         return Err(CryptoError::DataTooShort);
     }
     
-    if key.len() != 32 {
-        return Err(CryptoError::InvalidKeyLength);
-    }
-    
-    let key_arr: [u8; 32] = key.try_into().unwrap();
+    let key_arr: [u8; 32] = key.try_into().map_err(|_| CryptoError::InvalidKeyLength)?;
     
     let (nonce_bytes, ciphertext) = data.split_at(12);
     let cipher = Aes256Gcm::new(Key::<aes_gcm::Aes256Gcm>::from_slice(&key_arr));

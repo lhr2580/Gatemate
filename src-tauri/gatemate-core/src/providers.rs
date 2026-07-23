@@ -109,7 +109,7 @@ pub static PROVIDERS: [(&'static str, ProviderConfig); 13] = [
     }),
     ("huggingface", ProviderConfig {
         name: "Hugging Face",
-        url: "https://api-inference.huggingface.co/models/gpt2",
+        url: "https://api-inference.huggingface.co/models/",
         auth_header: "Authorization",
         auth_prefix: "Bearer ",
         prompt_price: 0.000001,
@@ -125,6 +125,15 @@ pub fn get_provider_url(provider: &str) -> String {
     get_provider_config(provider)
         .map(|c| c.url.to_string())
         .unwrap_or_else(|| "https://api.openai.com/v1/chat/completions".to_string())
+}
+
+pub fn get_provider_url_with_model(provider: &str, model: &str) -> String {
+    let base_url = get_provider_url(provider);
+    if provider == "huggingface" && !model.is_empty() {
+        base_url + model
+    } else {
+        base_url
+    }
 }
 
 pub fn calculate_cost(provider: &str, model: &str, prompt_tokens: i64, completion_tokens: i64) -> f64 {

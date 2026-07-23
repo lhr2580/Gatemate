@@ -4,6 +4,9 @@
 ![GitHub stars](https://img.shields.io/github/stars/lhr2580/Gatemate)
 ![GitHub issues](https://img.shields.io/github/issues/lhr2580/Gatemate)
 ![GitHub forks](https://img.shields.io/github/forks/lhr2580/Gatemate)
+![GitHub release](https://img.shields.io/github/v/release/lhr2580/Gatemate)
+![GitHub last commit](https://img.shields.io/github/last-commit/lhr2580/Gatemate)
+![GitHub workflow status](https://img.shields.io/github/actions/workflow/status/lhr2580/Gatemate/ci.yml)
 
 GateMate 是一个开源的 API 密钥管理和智能路由网关工具，帮助开发者管理多个 API 密钥，实现智能路由和流量分发，降低 API 调用成本。
 
@@ -42,6 +45,14 @@ GateMate 是一个开源的 API 密钥管理和智能路由网关工具，帮助
 - **数据库**: SQLite
 - **网络**: WebSocket + HTTP
 - **加密**: AES-256-GCM + OS Keychain
+
+## 🖼️ 界面预览
+
+**功能模块:**
+- 📊 **仪表盘**: 实时用量统计和图表展示
+- 🔑 **密钥管理**: 安全存储和管理多个 API 密钥
+- 📝 **调用日志**: 详细的请求记录和费用追踪
+- ⚙️ **设置**: 系统配置和主题切换
 
 ## 📦 构建要求
 
@@ -141,8 +152,30 @@ GateMate 支持通过动态插件扩展功能。插件接口定义在 `gatemate-
 
 1. 参考 `gatemate-plugin-api` 定义的接口
 2. 实现 `Plugin` trait
-3. 编译为 `.dll` 文件
+3. 编译为 `.dll` (Windows) / `.dylib` (macOS) / `.so` (Linux) 文件
 4. 将插件放入应用目录
+
+### 插件 API 接口
+
+```rust
+pub trait Plugin: Send + Sync {
+    fn get_info(&self) -> PluginInfo;
+    fn get_pro_status(&self) -> ProStatus;
+    fn smart_route(&self, request: RouteRequest) -> RouteResponse;
+    fn export_pdf(&self, request: PdfExportRequest) -> Result<String, String>;
+    fn verify_license(&self, license_key: &str) -> Result<ProStatus, String>;
+}
+```
+
+### 插件接口说明
+
+| 方法 | 说明 | 参数 | 返回值 |
+|------|------|------|--------|
+| `get_info` | 获取插件信息 | 无 | `PluginInfo` |
+| `get_pro_status` | 获取 Pro 状态 | 无 | `ProStatus` |
+| `smart_route` | 智能路由 | `RouteRequest` | `RouteResponse` |
+| `export_pdf` | PDF 导出 | `PdfExportRequest` | `Result<String, String>` |
+| `verify_license` | 验证许可证 | `license_key: &str` | `Result<ProStatus, String>` |
 
 ### Pro 插件
 

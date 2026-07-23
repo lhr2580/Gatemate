@@ -2,15 +2,15 @@
   <div class="app-container">
     <div class="particles">
       <div 
-        v-for="i in 20" 
-        :key="i" 
+        v-for="p in particles" 
+        :key="p.id" 
         class="particle"
         :style="{
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 20}s`,
-          animationDuration: `${15 + Math.random() * 10}s`,
-          background: i % 3 === 0 ? 'rgba(88, 166, 255, 0.3)' : i % 3 === 1 ? 'rgba(250, 173, 20, 0.2)' : 'rgba(46, 160, 67, 0.2)'
+          left: `${p.left}%`,
+          top: `${p.top}%`,
+          animationDelay: `${p.delay}s`,
+          animationDuration: `${p.duration}s`,
+          background: p.color
         }"
       ></div>
     </div>
@@ -472,6 +472,26 @@ interface CommandResult {
 }
 
 const EXCHANGE_RATE_DEFAULT = 7.2;
+
+interface Particle {
+  id: number;
+  left: number;
+  top: number;
+  delay: number;
+  duration: number;
+  color: string;
+}
+
+const particles = ref<Particle[]>(
+  Array.from({ length: 20 }, (_, i) => ({
+    id: i + 1,
+    left: Math.random() * 100,
+    top: Math.random() * 100,
+    delay: Math.random() * 20,
+    duration: 15 + Math.random() * 10,
+    color: i % 3 === 0 ? 'rgba(88, 166, 255, 0.3)' : i % 3 === 1 ? 'rgba(250, 173, 20, 0.2)' : 'rgba(46, 160, 67, 0.2)'
+  }))
+);
 
 const navItems = [
   { id: 'dashboard', icon: '📊', label: '仪表盘' },

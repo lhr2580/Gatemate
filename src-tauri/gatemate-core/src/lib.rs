@@ -691,12 +691,7 @@ fn get_app_data_dir() -> PathBuf {
         } else if let Ok(appdata) = std::env::var("APPDATA") {
             PathBuf::from(appdata).join("gatemate")
         } else {
-            let d_drive_path = PathBuf::from("D:\\GateMate");
-            if d_drive_path.parent().map(|p| p.exists()).unwrap_or(false) {
-                d_drive_path
-            } else {
-                PathBuf::from(".")
-            }
+            PathBuf::from(".")
         }
     }
     #[cfg(target_os = "macos")]
@@ -792,6 +787,6 @@ pub fn run() {
             let _ = app;
             Ok(())
         })
-        .run(tauri::generate_context!("../tauri.conf.json"))
+        .run(tauri::generate_context!("./tauri.conf.json"))
         .expect("error while running tauri application");
 }

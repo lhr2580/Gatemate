@@ -2,8 +2,18 @@
 name = "gatemate-core"
 version = "2.0.0"
 edition = "2021"
-description = "GateMate Core - Open Source API Key Management and Load Balancing"
+description = "GateMate Core - Open Source API Key Management and AI Gateway"
 license = "MIT"
+authors = ["刘浩然 <lhr2580@github.com>"]
+repository = "https://github.com/lhr2580/Gatemate"
+homepage = "https://github.com/lhr2580/Gatemate"
+documentation = "https://github.com/lhr2580/Gatemate"
+keywords = ["api-key", "gateway", "ai", "router", "proxy"]
+categories = ["api-bindings", "command-line-utilities", "network-programming", "security"]
+readme = "../../README.md"
+
+[package.metadata.tauri]
+bundle = { active = true, targets = "all" }
 
 [lib]
 name = "gatemate_core"

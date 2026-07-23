@@ -16,13 +16,24 @@ type SmartRouteFn = unsafe extern "C" fn(*const c_char) -> *const c_char;
 type ExportPdfFn = unsafe extern "C" fn(*const c_char) -> *const c_char;
 
 pub fn load_plugin() -> bool {
-    let plugin_path = "./gatemate_plugin.dll";
+    let plugin_filename = if cfg!(windows) {
+        "gatemate_plugin.dll"
+    } else if cfg!(target_os = "macos") {
+        "libgatemate_plugin.dylib"
+    } else {
+        "libgatemate_plugin.so"
+    };
     
-    if !std::path::Path::new(plugin_path).exists() {
+    let plugin_path = std::path::Path::new(".")
+        .join(plugin_filename)
+        .canonicalize()
+        .unwrap_or_else(|_| std::path::PathBuf::from(plugin_filename));
+    
+    if !plugin_path.exists() {
         return false;
     }
     
-    match unsafe { Library::new(plugin_path) } {
+    match unsafe { Library::new(&plugin_path) } {
         Ok(library) => {
             *PLUGIN_LIBRARY.lock().unwrap() = Some(library);
             *IS_LOADED.lock().unwrap() = true;

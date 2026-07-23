@@ -34,8 +34,12 @@ This project uses the following open-source libraries:
 - Tauri (Apache 2.0 License)
 - Rust (MIT/Apache 2.0 Dual License)
 - SQLite (Public Domain)
-- ed25519-dalek (BSD-3-Clause)
 - serde (MIT/Apache 2.0 Dual License)
+- rusqlite (MIT License)
+- reqwest (Apache 2.0 License)
+- tokio (MIT/Apache 2.0 Dual License)
+- aes-gcm (MIT License)
+- chart.js (MIT License)
 
 === License ===
 
