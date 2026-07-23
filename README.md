@@ -1,6 +1,11 @@
 # GateMate
 
-GateMate 是一个开源的 API 密钥管理和负载均衡工具，帮助开发者管理多个 API 密钥，实现智能路由和流量分发。
+![GitHub license](https://img.shields.io/github/license/lhr2580/Gatemate)
+![GitHub stars](https://img.shields.io/github/stars/lhr2580/Gatemate)
+![GitHub issues](https://img.shields.io/github/issues/lhr2580/Gatemate)
+![GitHub forks](https://img.shields.io/github/forks/lhr2580/Gatemate)
+
+GateMate 是一个开源的 API 密钥管理和智能路由网关工具，帮助开发者管理多个 API 密钥，实现智能路由和流量分发，降低 API 调用成本。
 
 ## ✨ 功能特性
 
@@ -12,6 +17,7 @@ GateMate 是一个开源的 API 密钥管理和负载均衡工具，帮助开发
 - **预算管理**: 设置月度预算，超支预警
 - **数据导出**: 支持 CSV 和 PDF 导出调用记录
 - **插件系统**: 支持通过插件扩展 Pro 功能
+- **数据加密**: AES-256-GCM 加密 + OS Keychain 集成
 
 ## 🌐 支持的服务商
 
@@ -35,6 +41,7 @@ GateMate 是一个开源的 API 密钥管理和负载均衡工具，帮助开发
 - **后端**: Rust + Tauri
 - **数据库**: SQLite
 - **网络**: WebSocket + HTTP
+- **加密**: AES-256-GCM + OS Keychain
 
 ## 📦 构建要求
 
