@@ -34,6 +34,6 @@
 
 ## 执行
 
-任何违反行为准则的行为都可以通过 [GitHub Issues](https://github.com/gatemate/gatemate/issues) 报告。所有投诉将由项目团队审查和调查，并将采取被认为适当的回应措施。
+任何违反行为准则的行为都可以通过 [GitHub Issues](https://github.com/lhr2580/Gatemate/issues) 报告。所有投诉将由项目团队审查和调查，并将采取被认为适当的回应措施。
 
 本行为准则部分改编自 [Contributor Covenant](https://www.contributor-covenant.org)，版本 2.0。
