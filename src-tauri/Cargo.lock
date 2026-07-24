@@ -1548,6 +1548,7 @@ name = "gatemate"
 version = "2.0.0"
 dependencies = [
  "gatemate-core",
+ "tauri-build",
 ]
 
 [[package]]

@@ -8,6 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
+    maxWorkers: 1,
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
