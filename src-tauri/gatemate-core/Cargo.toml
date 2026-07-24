@@ -34,7 +34,7 @@ base64.workspace = true
 aes-gcm.workspace = true
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
-hkdf = "0.12"
+hkdf = "0.13"
 zeroize.workspace = true
 lazy_static = "1.4"
 printpdf = "0.5"
