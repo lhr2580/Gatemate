@@ -10,7 +10,7 @@
           <label>供应商</label>
           <select v-model="form.provider" class="form-select" @change="handleProviderChange">
             <option value="" disabled>选择供应商</option>
-            <option v-for="p in providers" :key="p" :value="p">{{ p }}</option>
+            <option v-for="p in PROVIDERS" :key="p.id" :value="p.id">{{ p.label }}</option>
             <option value="other">Other (自定义)</option>
           </select>
           <input 
@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { PROVIDERS } from '../constants';
 
 interface ApiKey {
   id: number;
@@ -90,8 +91,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['close', 'submit', 'open-model-manager']);
-
-const providers = ['OpenAI', 'DeepSeek', 'Doubao', 'Qwen', 'Claude', 'Gemini', 'Groq', 'Ollama'];
 
 const form = ref({
   provider: '',
@@ -118,6 +117,9 @@ const groupedModels = computed(() => {
 
 const isValid = computed(() => {
   const provider = form.value.provider === 'other' ? form.value.customProvider : form.value.provider;
+  if (props.isEdit) {
+    return provider && (form.value.key && form.value.key !== '****');
+  }
   return provider && form.value.key;
 });
 

@@ -260,10 +260,10 @@ const renderChart = () => {
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: props.chartLabels.length > 0 ? props.chartLabels.slice(-7) : ['暂无数据'],
-      datasets: [{
-        label: '花费 (CNY)',
-        data: props.chartData.length > 0 ? props.chartData.slice(-7).map(v => v * props.exchangeRate) : [0],
+      labels: props.chartLabels.length > 0 ? props.chartLabels.slice(props.timeRange === '30d' ? -30 : -7) : ['暂无数据'],
+        datasets: [{
+          label: '花费 (CNY)',
+          data: props.chartData.length > 0 ? props.chartData.slice(props.timeRange === '30d' ? -30 : -7).map(v => v * props.exchangeRate) : [0],
         borderColor: '#58a6ff',
         backgroundColor: gradient,
         fill: true,

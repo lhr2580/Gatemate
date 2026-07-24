@@ -1,13 +1,7 @@
 [package]
 name = "gatemate-core"
-version = "2.0.0"
 edition = "2021"
 description = "GateMate Core - Open Source API Key Management and AI Gateway"
-license = "MIT"
-authors = ["刘浩然 <lhr2580@github.com>"]
-repository = "https://github.com/lhr2580/Gatemate"
-homepage = "https://github.com/lhr2580/Gatemate"
-documentation = "https://github.com/lhr2580/Gatemate"
 keywords = ["api-key", "gateway", "ai", "router", "proxy"]
 categories = ["api-bindings", "command-line-utilities", "network-programming", "security"]
 readme = "../../README.md"
@@ -24,29 +18,36 @@ name = "gatemate"
 path = "src/main.rs"
 
 [dependencies]
-tauri = { version = "2" }
-rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+tauri.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 hex = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
-tokio = { version = "1", features = ["full"] }
+chrono.workspace = true
+tokio.workspace = true
 tokio-tungstenite = "0.21"
-reqwest = { version = "0.12", features = ["json", "blocking"] }
+reqwest.workspace = true
 futures-util = "0.3"
 url = "2.5"
-rand = "0.8"
-base64 = "0.22"
-aes-gcm = { version = "0.10", features = ["std", "zeroize"] }
+rand.workspace = true
+base64.workspace = true
+aes-gcm.workspace = true
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
 hkdf = "0.12"
-zeroize = { version = "1.7", features = ["std"] }
+zeroize.workspace = true
 lazy_static = "1.4"
 printpdf = "0.5"
 libloading = "0.8"
 libc = "0.2"
 keyring = "2.3"
+log.workspace = true
+env_logger.workspace = true
+http = "1.1"
+hyper = { version = "1.3", features = ["server"] }
+hyper-util = "0.1"
+http-body-util = "0.1"
+tokio-util = { version = "0.7", features = ["codec"] }
 
 [build-dependencies]
 tauri-build = { version = "2" }

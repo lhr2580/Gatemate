@@ -24,16 +24,25 @@ pub fn load_plugin() -> bool {
         "libgatemate_plugin.so"
     };
     
-    let plugin_path = std::path::Path::new(".")
-        .join(plugin_filename)
-        .canonicalize()
-        .unwrap_or_else(|_| std::path::PathBuf::from(plugin_filename));
+    let app_data_dir = crate::get_app_data_dir();
+    let plugin_path = app_data_dir.join("plugins").join(plugin_filename);
     
     if !plugin_path.exists() {
-        return false;
+        let alt_path = std::path::Path::new(".")
+            .join(plugin_filename)
+            .canonicalize()
+            .unwrap_or_else(|_| std::path::PathBuf::from(plugin_filename));
+        if !alt_path.exists() {
+            return false;
+        }
+        return load_plugin_from_path(&alt_path);
     }
     
-    match unsafe { Library::new(&plugin_path) } {
+    load_plugin_from_path(&plugin_path)
+}
+
+fn load_plugin_from_path(plugin_path: &std::path::Path) -> bool {
+    match unsafe { Library::new(plugin_path) } {
         Ok(library) => {
             *PLUGIN_LIBRARY.lock().unwrap() = Some(library);
             *IS_LOADED.lock().unwrap() = true;
@@ -67,6 +76,11 @@ pub fn get_pro_status() -> serde_json::Value {
     
     let library = PLUGIN_LIBRARY.lock().unwrap();
     if let Some(ref lib) = *library {
+        // SAFETY: 
+        // 1. Library is loaded and validated in load_plugin()
+        // 2. Function symbols are retrieved with error checking
+        // 3. CStr::from_ptr is safe because the plugin guarantees null-terminated strings
+        // 4. free_func is called to release memory allocated by the plugin
         unsafe {
             let func: Symbol<GetProStatusFn> = match lib.get(b"gatemate_plugin_get_pro_status") {
                 Ok(f) => f,
@@ -103,6 +117,11 @@ pub fn smart_route(request: &serde_json::Value) -> serde_json::Value {
     
     let library = PLUGIN_LIBRARY.lock().unwrap();
     if let Some(ref lib) = *library {
+        // SAFETY:
+        // 1. Library is loaded and validated
+        // 2. CString::new ensures null-terminated input
+        // 3. CStr::from_ptr is safe as plugin returns null-terminated strings
+        // 4. free_func releases plugin-allocated memory
         unsafe {
             let request_json = serde_json::to_string(request).unwrap();
             let request_cstr = CString::new(request_json).unwrap();
@@ -149,6 +168,11 @@ pub fn export_pdf(request: &serde_json::Value) -> serde_json::Value {
     
     let library = PLUGIN_LIBRARY.lock().unwrap();
     if let Some(ref lib) = *library {
+        // SAFETY:
+        // 1. Library is loaded and validated
+        // 2. CString::new ensures null-terminated input
+        // 3. CStr::from_ptr is safe as plugin returns null-terminated strings
+        // 4. free_func releases plugin-allocated memory
         unsafe {
             let request_json = serde_json::to_string(request).unwrap();
             let request_cstr = CString::new(request_json).unwrap();
@@ -183,6 +207,11 @@ pub fn verify_license(license_key: &str) -> serde_json::Value {
     
     let library = PLUGIN_LIBRARY.lock().unwrap();
     if let Some(ref lib) = *library {
+        // SAFETY:
+        // 1. Library is loaded and validated
+        // 2. CString::new ensures null-terminated input
+        // 3. CStr::from_ptr is safe as plugin returns null-terminated strings
+        // 4. free_func releases plugin-allocated memory
         unsafe {
             let key_cstr = CString::new(license_key).unwrap();
             

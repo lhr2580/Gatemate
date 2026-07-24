@@ -4,6 +4,7 @@ pub mod providers;
 mod server;
 pub mod plugin_loader;
 
+use chrono::{Local, Datelike};
 use rusqlite::Connection;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -11,7 +12,10 @@ use tauri::{Emitter, Manager, State};
 
 #[tauri::command]
 fn save_key(project_id: i64, provider: String, api_key: String, remark: String, daily_limit: f64, monthly_limit: f64, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
-    let conn = conn.lock().unwrap();
+    let conn = match conn.lock() {
+        Ok(c) => c,
+        Err(e) => return format!("获取数据库连接失败: {}", e),
+    };
     let master = crypto::get_master_key();
     let encrypted = match crypto::encrypt(&api_key, &master) {
         Ok(e) => e,
@@ -96,12 +100,12 @@ fn set_key_status(id: i64, status: String, conn: State<'_, Arc<Mutex<Connection>
 }
 
 #[tauri::command]
-fn test_key(id: i64, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
+async fn test_key(id: i64, conn: State<'_, Arc<Mutex<Connection>>>) -> Result<String, String> {
     let (provider, encrypted_key) = {
         let conn = conn.lock().unwrap();
         let key = match db::get_key_by_id(&conn, id) {
             Ok(k) => k,
-            Err(e) => return format!("获取密钥失败: {}", e),
+            Err(e) => return Err(format!("获取密钥失败: {}", e)),
         };
         (key.provider, key.encrypted_key)
     };
@@ -109,7 +113,7 @@ fn test_key(id: i64, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
     let master = crypto::get_master_key();
     let decrypted_key = match crypto::decrypt(&encrypted_key, &master) {
         Ok(k) => k,
-        Err(e) => return format!("解密密钥失败: {}", e),
+        Err(e) => return Err(format!("解密密钥失败: {}", e)),
     };
     
     let url = match provider.as_str() {
@@ -120,40 +124,39 @@ fn test_key(id: i64, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
         "gemini" => "https://generativelanguage.googleapis.com/v1beta/models",
         "doubao" => "https://api.doubao.com/v1/models",
         "yiyan" => "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro",
-        _ => return "不支持的供应商".to_string(),
+        _ => return Err("不支持的供应商".to_string()),
     };
     
-    let response = std::thread::spawn(move || {
-        let client = reqwest::blocking::Client::new();
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-        
-        match provider.as_str() {
-            "openai" | "deepseek" | "qwen" | "doubao" | "yiyan" => {
-                headers.insert("Authorization", format!("Bearer {}", decrypted_key).parse().unwrap());
-            }
-            "anthropic" => {
-                headers.insert("x-api-key", decrypted_key.parse().unwrap());
-            }
-            "gemini" => {
-                headers.insert("x-goog-api-key", decrypted_key.parse().unwrap());
-            }
-            _ => {}
+    let client = reqwest::Client::new();
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("Content-Type", "application/json".parse().unwrap());
+    
+    match provider.as_str() {
+        "openai" | "deepseek" | "qwen" | "doubao" | "yiyan" => {
+            headers.insert("Authorization", format!("Bearer {}", decrypted_key).parse().unwrap());
         }
-        
-        client.get(url).headers(headers).send()
-    }).join().unwrap();
+        "anthropic" => {
+            headers.insert("x-api-key", decrypted_key.parse().unwrap());
+        }
+        "gemini" => {
+            headers.insert("x-goog-api-key", decrypted_key.parse().unwrap());
+        }
+        _ => {}
+    }
+    
+    let response = tokio::time::timeout(tokio::time::Duration::from_secs(15), client.get(url).headers(headers).send()).await;
     
     match response {
-        Ok(resp) => {
+        Ok(Ok(resp)) => {
             if resp.status().is_success() {
-                "测试成功".to_string()
+                Ok("测试成功".to_string())
             } else {
-                let error_text = resp.text().unwrap_or("未知错误".to_string());
-                format!("测试失败: {}", error_text)
+                let error_text = resp.text().await.unwrap_or("未知错误".to_string());
+                Err(format!("测试失败: {}", error_text))
             }
         }
-        Err(e) => format!("网络请求失败: {}", e),
+        Ok(Err(e)) => Err(format!("网络请求失败: {}", e)),
+        Err(_) => Err("请求超时".to_string()),
     }
 }
 
@@ -234,6 +237,28 @@ fn get_notification_enabled(conn: State<'_, Arc<Mutex<Connection>>>) -> bool {
 fn set_notification_enabled(enabled: bool, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
     let conn = conn.lock().unwrap();
     match db::set_setting(&conn, "notification_enabled", &enabled.to_string()) {
+        Ok(_) => "success".to_string(),
+        Err(e) => format!("失败: {}", e),
+    }
+}
+
+#[tauri::command]
+fn get_exchange_rate(conn: State<'_, Arc<Mutex<Connection>>>) -> f64 {
+    let conn = conn.lock().unwrap();
+    match db::get_setting(&conn, "exchange_rate") {
+        Ok(Some(s)) => s.parse().unwrap_or(7.2),
+        Ok(None) => 7.2,
+        Err(e) => {
+            eprintln!("⚠️ 读取汇率失败: {}", e);
+            7.2
+        }
+    }
+}
+
+#[tauri::command]
+fn set_exchange_rate(rate: f64, conn: State<'_, Arc<Mutex<Connection>>>) -> String {
+    let conn = conn.lock().unwrap();
+    match db::set_setting(&conn, "exchange_rate", &rate.to_string()) {
         Ok(_) => "success".to_string(),
         Err(e) => format!("失败: {}", e),
     }
@@ -461,7 +486,7 @@ fn export_pdf(project_id: i64, start_date: String, end_date: String, conn: State
     let (doc, page1, layer1) = PdfDocument::new("GateMate Report", Mm(210.0), Mm(297.0), "Layer 1");
     let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
     
-    let current_layer = doc.get_page(page1).get_layer(layer1);
+    let mut current_layer = doc.get_page(page1).get_layer(layer1);
     let mut y_pos = Mm(270.0);
     
     current_layer.use_text("GateMate Report", 24.0, Mm(10.0), y_pos, &font);
@@ -491,7 +516,7 @@ fn export_pdf(project_id: i64, start_date: String, end_date: String, conn: State
     for log in &logs {
         if y_pos < Mm(30.0) {
             let (new_page, new_layer) = doc.add_page(Mm(210.0), Mm(297.0), "Layer 1");
-            let current_layer = doc.get_page(new_page).get_layer(new_layer);
+            current_layer = doc.get_page(new_page).get_layer(new_layer);
             
             y_pos = Mm(270.0);
             x_pos = Mm(10.0);
@@ -718,7 +743,57 @@ fn get_app_data_dir() -> PathBuf {
     }
 }
 
+async fn usage_reset_cron(db_arc: Arc<Mutex<Connection>>) {
+    let mut last_day = Local::now().day();
+    let mut last_month = Local::now().month();
+    
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        
+        let now = Local::now();
+        let current_day = now.day();
+        let current_month = now.month();
+        
+        if current_day != last_day {
+            last_day = current_day;
+            let conn = match db_arc.lock() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("⚠️ 获取数据库连接失败: {}", e);
+                    continue;
+                }
+            };
+            if let Err(e) = db::reset_all_keys_daily_usage(&conn) {
+                eprintln!("⚠️ 重置日用量失败: {}", e);
+            } else {
+                println!("📅 已重置所有密钥日用量");
+            }
+        }
+        
+        if current_month != last_month {
+            last_month = current_month;
+            let conn = match db_arc.lock() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("⚠️ 获取数据库连接失败: {}", e);
+                    continue;
+                }
+            };
+            if let Err(e) = db::reset_all_keys_monthly_usage(&conn) {
+                eprintln!("⚠️ 重置月用量失败: {}", e);
+            } else {
+                println!("📅 已重置所有密钥月用量");
+            }
+        }
+    }
+}
+
 pub fn run() {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+    env_logger::init();
+    
     let app_data_dir = get_app_data_dir();
     if let Err(e) = std::fs::create_dir_all(app_data_dir.join("data")) {
         eprintln!("⚠️ 创建数据目录失败: {}", e);
@@ -763,12 +838,18 @@ pub fn run() {
         }
     });
 
+    let db_arc = Arc::new(Mutex::new(db_conn));
+    let db_arc_for_cron = Arc::clone(&db_arc);
+    tauri::async_runtime::spawn(async move {
+        usage_reset_cron(db_arc_for_cron).await;
+    });
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             save_key, get_keys, delete_key, update_key, test_key, get_daily_stats, get_daily_usage, get_monthly_usage, 
             set_key_status, get_usage_logs, get_route_strategy, set_route_strategy, 
-            get_notification_enabled, set_notification_enabled, get_models, add_model, 
-            delete_model, toggle_model, get_models_by_provider, get_call_logs, 
+            get_notification_enabled, set_notification_enabled, get_exchange_rate, set_exchange_rate,
+            get_models, add_model, delete_model, toggle_model, get_models_by_provider, get_call_logs, 
             get_call_logs_filtered, clear_call_logs, export_csv, export_pdf, send_notification,
             get_all_projects, get_project, create_project, update_project, delete_project,
             get_project_monthly_usage, get_routing_rules, insert_routing_rule, 
@@ -777,7 +858,7 @@ pub fn run() {
             mark_all_notifications_as_read, clear_all_notifications, insert_notification,
             is_pro_user, reload_plugins, verify_license
         ])
-        .manage(Arc::new(Mutex::new(db_conn)))
+        .manage(db_arc)
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 let _ = window.close();
@@ -796,6 +877,6 @@ pub fn run() {
             let _ = app;
             Ok(())
         })
-        .run(tauri::generate_context!("./tauri.conf.json"))
+        .run(tauri::generate_context!("../tauri.conf.json"))
         .expect("error while running tauri application");
 }

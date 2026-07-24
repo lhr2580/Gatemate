@@ -21,6 +21,10 @@
     "url": "https://github.com/lhr2580/Gatemate/issues"
   },
   "homepage": "https://github.com/lhr2580/Gatemate",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
@@ -38,12 +42,18 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitest/ui": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
+    "eslint": "^10.7.0",
+    "eslint-plugin-vue": "^10.10.0",
+    "jsdom": "^29.1.1",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vitest": "^4.1.10",
+    "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^2.1.10"
   }
 }

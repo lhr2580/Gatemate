@@ -2,12 +2,14 @@ use rusqlite::{Connection, Result, params};
 use chrono::{Local, Datelike};
 use serde::{Serialize, Deserialize};
 
+mod migrations;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ApiKey {
     pub id: i64,
     pub project_id: i64,
     pub provider: String,
-    #[serde(rename = "key_encrypted")]
+    #[serde(skip_serializing)]
     pub encrypted_key: String,
     pub remark: String,
     pub status: String,
@@ -104,6 +106,21 @@ pub struct RoutingRuleUpdate {
     pub is_enabled: i32,
 }
 
+fn get_current_month_range() -> (String, String) {
+    let now = Local::now();
+    let month = now.format("%Y-%m").to_string();
+    let date = now.date_naive();
+    let year = date.year();
+    let month_num = date.month();
+    let (next_year, next_month_num) = if month_num == 12 {
+        (year + 1, 1)
+    } else {
+        (year, month_num + 1)
+    };
+    let next_month = format!("{}-{:02}-01", next_year, next_month_num);
+    (month, next_month)
+}
+
 pub fn init_db(db_path: &str) -> Result<Connection> {
     let conn = Connection::open(db_path)?;
     
@@ -112,123 +129,7 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
          PRAGMA synchronous=NORMAL;"
     )?;
     
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT DEFAULT '',
-            monthly_budget REAL DEFAULT 0.0,
-            created_at TEXT NOT NULL
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS keys (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            provider TEXT NOT NULL,
-            encrypted_key TEXT NOT NULL,
-            remark TEXT DEFAULT '',
-            status TEXT DEFAULT 'active',
-            daily_limit REAL DEFAULT 0.0,
-            monthly_limit REAL DEFAULT 0.0,
-            daily_usage REAL DEFAULT 0.0,
-            monthly_usage REAL DEFAULT 0.0,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (project_id) REFERENCES projects(id)
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS usage_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key_id INTEGER NOT NULL,
-            project_id INTEGER NOT NULL,
-            provider TEXT NOT NULL,
-            cost REAL NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (key_id) REFERENCES keys(id)
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS call_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            key_id INTEGER NOT NULL,
-            provider TEXT NOT NULL,
-            remark TEXT DEFAULT '',
-            model TEXT DEFAULT '',
-            prompt_tokens INTEGER DEFAULT 0,
-            completion_tokens INTEGER DEFAULT 0,
-            cost REAL DEFAULT 0.0,
-            status TEXT DEFAULT 'pending',
-            error_message TEXT,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (key_id) REFERENCES keys(id)
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS models (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            provider TEXT NOT NULL,
-            tags TEXT DEFAULT '',
-            enabled INTEGER DEFAULT 1
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS notifications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            type TEXT NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            is_read INTEGER DEFAULT 0,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (project_id) REFERENCES projects(id)
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS routing_rules (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            rule_name TEXT NOT NULL,
-            match_type TEXT NOT NULL DEFAULT 'keyword',
-            match_content TEXT NOT NULL DEFAULT '',
-            target_provider TEXT NOT NULL,
-            target_model TEXT NOT NULL,
-            priority INTEGER DEFAULT 0,
-            is_enabled INTEGER DEFAULT 1,
-            FOREIGN KEY (project_id) REFERENCES projects(id)
-        )",
-        [],
-    )?;
-    
-    let project_count: i64 = conn.query_row("SELECT COUNT(*) FROM projects", [], |row| row.get(0))?;
-    if project_count == 0 {
-        conn.execute(
-            "INSERT INTO projects (name, description, monthly_budget, created_at) VALUES (?, ?, ?, ?)",
-            params!["默认项目", "默认项目描述", 0.0, Local::now().format("%Y-%m-%d %H:%M:%S").to_string()],
-        )?;
-    }
+    migrations::migrate(&conn)?;
     
     Ok(conn)
 }
@@ -344,14 +245,10 @@ pub fn get_daily_usage(conn: &Connection, key_id: i64) -> Result<f64> {
 }
 
 pub fn get_monthly_usage(conn: &Connection, key_id: i64) -> Result<f64> {
-    let now = Local::now();
-    let month = now.format("%Y-%m").to_string();
-    let current_month = now.month();
-    let next_month_num = if current_month == 12 { 1 } else { current_month + 1 };
-    let next_month = now.date_naive().with_day(1).unwrap().with_month(next_month_num).unwrap();
+    let (month, next_month) = get_current_month_range();
     conn.query_row(
         "SELECT COALESCE(SUM(cost), 0.0) FROM usage_logs WHERE key_id = ? AND created_at >= ? AND created_at < ?",
-        params![key_id, format!("{} 00:00:00", month), format!("{} 00:00:00", next_month.format("%Y-%m-%d"))],
+        params![key_id, format!("{} 00:00:00", month), format!("{} 00:00:00", next_month)],
         |row| row.get(0),
     )
 }
@@ -369,14 +266,10 @@ pub fn add_key_daily_usage(conn: &Connection, key_id: i64, cost: f64) -> Result<
         params![key_id, format!("{} 00:00:00", today), format!("{} 23:59:59", today), key_id],
     )?;
     
-    let now = Local::now();
-    let month = now.format("%Y-%m").to_string();
-    let current_month = now.month();
-    let next_month_num = if current_month == 12 { 1 } else { current_month + 1 };
-    let next_month = now.date_naive().with_day(1).unwrap().with_month(next_month_num).unwrap();
+    let (month, next_month) = get_current_month_range();
     conn.execute(
         "UPDATE keys SET monthly_usage = (SELECT COALESCE(SUM(cost), 0.0) FROM usage_logs WHERE key_id = ? AND created_at >= ? AND created_at < ?) WHERE id = ?",
-        params![key_id, format!("{} 00:00:00", month), format!("{} 00:00:00", next_month.format("%Y-%m-%d")), key_id],
+        params![key_id, format!("{} 00:00:00", month), format!("{} 00:00:00", next_month), key_id],
     )?;
     
     Ok(())
@@ -392,16 +285,22 @@ pub fn get_project_daily_usage(conn: &Connection, project_id: i64) -> Result<f64
 }
 
 pub fn get_project_monthly_usage(conn: &Connection, project_id: i64) -> Result<f64> {
-    let now = Local::now();
-    let month = now.format("%Y-%m").to_string();
-    let current_month = now.month();
-    let next_month_num = if current_month == 12 { 1 } else { current_month + 1 };
-    let next_month = now.date_naive().with_day(1).unwrap().with_month(next_month_num).unwrap();
+    let (month, next_month) = get_current_month_range();
     conn.query_row(
         "SELECT COALESCE(SUM(cost), 0.0) FROM usage_logs WHERE project_id = ? AND created_at >= ? AND created_at < ?",
-        params![project_id, format!("{} 00:00:00", month), format!("{} 00:00:00", next_month.format("%Y-%m-%d"))],
+        params![project_id, format!("{} 00:00:00", month), format!("{} 00:00:00", next_month)],
         |row| row.get(0),
     )
+}
+
+pub fn reset_all_keys_daily_usage(conn: &Connection) -> Result<()> {
+    conn.execute("UPDATE keys SET daily_usage = 0.0", [])?;
+    Ok(())
+}
+
+pub fn reset_all_keys_monthly_usage(conn: &Connection) -> Result<()> {
+    conn.execute("UPDATE keys SET monthly_usage = 0.0", [])?;
+    Ok(())
 }
 
 pub fn get_monthly_usage_by_day(conn: &Connection) -> Result<Vec<(String, f64)>> {

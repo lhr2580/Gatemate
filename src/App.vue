@@ -594,9 +594,13 @@ const checkHealth = async () => {
 };
 
 const loadData = async () => {
-  await Promise.all([loadKeys(), loadStats(), loadLogs(), loadModels(), loadRouteStrategy(), loadRoutingRules(), loadNotificationSetting()]);
+  await Promise.all([loadKeys(), loadStats(), loadLogs(), loadModels(), loadRouteStrategy(), loadRoutingRules(), loadNotificationSetting(), loadExchangeRate()]);
   await loadKeyUsages();
   await loadProjectUsages();
+};
+
+const loadExchangeRate = async () => {
+  exchangeRate.value = await invoke<number>('get_exchange_rate').catch(() => EXCHANGE_RATE_DEFAULT);
 };
 
 const refreshData = () => {
@@ -605,7 +609,8 @@ const refreshData = () => {
 };
 
 const loadKeys = async () => {
-  keys.value = await invoke<ApiKey[]>('get_keys', { projectId: currentProject.value?.id || 1 }).catch(() => []);
+  if (!currentProject.value) return;
+  keys.value = await invoke<ApiKey[]>('get_keys', { projectId: currentProject.value.id }).catch(() => []);
 };
 
 const loadKeyUsages = async () => {
@@ -737,7 +742,16 @@ const checkUsageAndNotify = async () => {
 };
 
 const loadStats = async () => {
-  const stats = await invoke<{ daily_cost: number; monthly_cost: number; chart_labels: string[]; chart_data: number[] }>('get_daily_stats', { projectId: currentProject.value?.id || 1 }).catch(() => ({
+  if (!currentProject.value) {
+    dailyCost.value = 0;
+    monthlyCost.value = 0;
+    chartLabels.value = [];
+    chartData.value = [];
+    dailyChange.value = null;
+    monthlyChange.value = null;
+    return;
+  }
+  const stats = await invoke<{ daily_cost: number; monthly_cost: number; chart_labels: string[]; chart_data: number[] }>('get_daily_stats', { projectId: currentProject.value.id }).catch(() => ({
     daily_cost: 0, monthly_cost: 0, chart_labels: [], chart_data: []
   }));
   dailyCost.value = stats.daily_cost;
@@ -755,18 +769,18 @@ const loadStats = async () => {
 };
 
 const loadLogs = async (newFilter?: { provider: string; status: string }) => {
+  if (!currentProject.value) return;
   if (newFilter) {
     logFilter.value = newFilter;
   }
-  const projectId = currentProject.value?.id || 1;
   if (logFilter.value.provider || logFilter.value.status) {
     callLogs.value = await invoke<CallLog[]>('get_call_logs_filtered', { 
-      projectId,
+      projectId: currentProject.value.id,
       provider: logFilter.value.provider || undefined,
       status: logFilter.value.status || undefined 
     }).catch(() => []);
   } else {
-    callLogs.value = await invoke<CallLog[]>('get_call_logs', { projectId }).catch(() => []);
+    callLogs.value = await invoke<CallLog[]>('get_call_logs', { projectId: currentProject.value.id }).catch(() => []);
   }
 };
 
@@ -779,7 +793,11 @@ const loadRouteStrategy = async () => {
 };
 
 const loadRoutingRules = async () => {
-  smartRoutingRules.value = await invoke<any[]>('get_routing_rules', { projectId: currentProject.value?.id || 1 }).catch(() => []);
+  if (!currentProject.value) {
+    smartRoutingRules.value = [];
+    return;
+  }
+  smartRoutingRules.value = await invoke<any[]>('get_routing_rules', { projectId: currentProject.value.id }).catch(() => []);
 };
 
 const loadNotificationSetting = async () => {
@@ -809,10 +827,11 @@ const saveKey = async (form: { provider: string; customProvider: string; model: 
   }
   
   if (editingKey.value) {
+    const apiKey = form.key && form.key !== '****' ? form.key : undefined;
     await invoke('update_key', { 
       id: editingKey.value.id,
       provider: form.provider, 
-      apiKey: form.key || undefined,
+      apiKey,
       remark: form.remark,
       dailyLimit: form.daily_limit,
       monthlyLimit: form.monthly_limit
@@ -825,7 +844,7 @@ const saveKey = async (form: { provider: string; customProvider: string; model: 
     }
     
     await invoke('save_key', { 
-      projectId: currentProject.value?.id || 1,
+      projectId: currentProject.value?.id,
       provider: form.provider, 
       apiKey: form.key, 
       remark: form.remark,
@@ -938,11 +957,29 @@ const exportPDF = async () => {
 };
 
 const verifyLicense = async () => {
-  showLicenseModal.value = false;
-  showToastMsg('激活码验证成功');
+  if (!licenseKey.value.trim()) {
+    showToastMsg('请输入激活码');
+    return;
+  }
+  try {
+    const result = await invoke<{ is_pro: boolean; expires_at: string | null; message: string }>('verify_license', { licenseKey: licenseKey.value });
+    if (result.is_pro) {
+      isProUser.value = true;
+      showLicenseModal.value = false;
+      showToastMsg('激活成功');
+    } else {
+      showToastMsg(result.message || '激活码无效');
+    }
+  } catch (e) {
+    showToastMsg('验证失败，请检查网络连接');
+  }
 };
 
-const saveSettings = () => {
+const saveSettings = async (settings?: { exchangeRate: number }) => {
+  if (settings?.exchangeRate !== undefined) {
+    exchangeRate.value = settings.exchangeRate;
+    await invoke('set_exchange_rate', { rate: settings.exchangeRate });
+  }
   showSettings.value = false;
   showToastMsg('设置已保存');
 };
@@ -965,8 +1002,16 @@ const getNotificationIcon = (type: string) => {
   return icons[type] || '🔔';
 };
 
-const formatNotificationTime = (timestamp: number) => {
-  const date = new Date(timestamp * 1000);
+const formatNotificationTime = (time: string | number) => {
+  let date: Date;
+  if (typeof time === 'number') {
+    date = new Date(time * 1000);
+  } else {
+    date = new Date(time.replace(/-/g, '/'));
+    if (isNaN(date.getTime())) {
+      return time;
+    }
+  }
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const minutes = Math.floor(diff / 60000);

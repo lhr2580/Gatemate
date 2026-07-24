@@ -15,7 +15,75 @@ pub fn generate_random_key() -> Vec<u8> {
     key
 }
 
+fn get_machine_guid() -> String {
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        if let Ok(output) = Command::new("reg")
+            .args(["query", "HKLM\\SOFTWARE\\Microsoft\\Cryptography", "/v", "MachineGuid"])
+            .output()
+        {
+            if let Ok(output_str) = String::from_utf8(output.stdout) {
+                for line in output_str.lines() {
+                    if let Some(guid) = line.split_whitespace().last() {
+                        return guid.to_string();
+                    }
+                }
+            }
+        }
+    }
+    "default_machine_guid".to_string()
+}
+
+fn encrypt_key_for_file(key: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    let machine_guid = get_machine_guid();
+    let derived_key = derive_key_from_string(&machine_guid);
+    encrypt_bytes(key, &derived_key)
+}
+
+fn decrypt_key_from_file(encrypted: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    let machine_guid = get_machine_guid();
+    let derived_key = derive_key_from_string(&machine_guid);
+    decrypt_bytes(encrypted, &derived_key)
+}
+
+fn derive_key_from_string(input: &str) -> Vec<u8> {
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(input.as_bytes());
+    hasher.finalize().to_vec()
+}
+
+fn encrypt_bytes(data: &[u8], key: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    let key_arr: [u8; 32] = key.try_into().map_err(|_| CryptoError::InvalidKeyLength)?;
+    let cipher = Aes256Gcm::new(Key::<aes_gcm::Aes256Gcm>::from_slice(&key_arr));
+    let nonce = Aes256Gcm::generate_nonce(&mut rand::thread_rng());
+    let ciphertext = cipher.encrypt(&nonce, data)
+        .map_err(|e| CryptoError::EncryptionError(format!("{}", e)))?;
+    
+    let mut result = Vec::with_capacity(12 + ciphertext.len());
+    result.extend_from_slice(&nonce);
+    result.extend_from_slice(&ciphertext);
+    Ok(result)
+}
+
+fn decrypt_bytes(encrypted: &[u8], key: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    if encrypted.len() < 12 {
+        return Err(CryptoError::DataTooShort);
+    }
+    let key_arr: [u8; 32] = key.try_into().map_err(|_| CryptoError::InvalidKeyLength)?;
+    let (nonce_bytes, ciphertext) = encrypted.split_at(12);
+    let cipher = Aes256Gcm::new(Key::<aes_gcm::Aes256Gcm>::from_slice(&key_arr));
+    let nonce = Nonce::from_slice(nonce_bytes);
+    cipher.decrypt(nonce, ciphertext)
+        .map_err(|e| CryptoError::DecryptionError(format!("{}", e)))
+}
+
 pub fn get_master_key() -> Vec<u8> {
+    let app_data_dir = crate::get_app_data_dir();
+    let secure_key_path = app_data_dir.join("master_key_secure.bin");
+    let legacy_key_path = app_data_dir.join(MASTER_KEY_FILE);
+    
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USERNAME) {
         if let Ok(key_b64) = entry.get_password() {
             if let Ok(key) = general_purpose::STANDARD.decode(&key_b64) {
@@ -26,17 +94,24 @@ pub fn get_master_key() -> Vec<u8> {
         }
     }
     
-    let app_data_dir = crate::get_app_data_dir();
-    let key_path = app_data_dir.join(MASTER_KEY_FILE);
+    if secure_key_path.exists() {
+        if let Ok(encrypted) = fs::read(&secure_key_path) {
+            if let Ok(key) = decrypt_key_from_file(&encrypted) {
+                if key.len() == 32 {
+                    return key;
+                }
+            }
+        }
+    }
     
-    let key = if key_path.exists() {
-        match fs::read(&key_path) {
-            Ok(key) if key.len() == 32 => {
+    let key = if legacy_key_path.exists() {
+        match fs::read(&legacy_key_path) {
+            Ok(mut key) if key.len() == 32 => {
                 eprintln!("⚠️ 警告: 检测到旧版明文密钥文件，正在迁移到安全存储...");
-                let _ = fs::remove_file(&key_path);
-                let mut key_clone = key.clone();
-                key_clone.zeroize();
-                key
+                let _ = fs::remove_file(&legacy_key_path);
+                let key_to_return = key.clone();
+                key.zeroize();
+                key_to_return
             }
             Ok(mut key) => {
                 key.zeroize();
@@ -48,24 +123,26 @@ pub fn get_master_key() -> Vec<u8> {
         generate_random_key()
     };
     
-    let mut key_for_storage = key.clone();
-    
     let mut stored = false;
+    
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USERNAME) {
         let key_b64 = general_purpose::STANDARD.encode(&key);
-        if let Err(e) = entry.set_password(&key_b64) {
-            eprintln!("⚠️ 警告: 无法将主密钥存储到系统密钥链: {} - 密钥将在重启后丢失", e);
-        } else {
+        if entry.set_password(&key_b64).is_ok() {
             stored = true;
         }
-    } else {
-        eprintln!("⚠️ 警告: 系统密钥链不可用 - 密钥将在重启后丢失");
     }
     
-    key_for_storage.zeroize();
+    if !stored {
+        if let Ok(encrypted) = encrypt_key_for_file(&key) {
+            if fs::write(&secure_key_path, &encrypted).is_ok() {
+                stored = true;
+                eprintln!("⚠️ 警告: 系统密钥链不可用，主密钥已加密存储到文件");
+            }
+        }
+    }
     
     if !stored {
-        eprintln!("⚠️ 警告: 主密钥仅存储在内存中，重启后将重新生成，所有加密数据将无法解密");
+        eprintln!("⚠️ 严重警告: 主密钥仅存储在内存中，重启后将重新生成，所有加密数据将无法解密");
     }
     
     key
