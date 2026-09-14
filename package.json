@@ -43,7 +43,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
-    "@typescript-eslint/parser": "^8.65.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitest/ui": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
